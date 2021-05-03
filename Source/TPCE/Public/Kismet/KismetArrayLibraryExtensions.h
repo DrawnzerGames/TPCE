@@ -23,14 +23,14 @@ public:
 	static void Array_ShuffleWithStream(const TArray<int32>& TargetArray, const FRandomStream& RandomStream);
 
 	// Native functions that will be called by the below custom thunk layers, which read off the property address, and call the appropriate native handler
-	static void GenericArray_ShuffleWithStream(void* TargetArray, const UArrayProperty* ArrayProp, const FRandomStream& RandomStream);
+	static void GenericArray_ShuffleWithStream(void* TargetArray, const FArrayProperty* ArrayProp, const FRandomStream& RandomStream);
 
 	DECLARE_FUNCTION(execArray_ShuffleWithStream)
 	{
 		Stack.MostRecentProperty = nullptr;
-		Stack.StepCompiledIn<UArrayProperty>(NULL);
+		Stack.StepCompiledIn<FArrayProperty>(nullptr);
 		void* ArrayAddr = Stack.MostRecentPropertyAddress;
-		UArrayProperty* ArrayProperty = Cast<UArrayProperty>(Stack.MostRecentProperty);
+		FArrayProperty* ArrayProperty = static_cast<FArrayProperty*>(Stack.MostRecentProperty);
 		if (!ArrayProperty)
 		{
 			Stack.bArrayContextFailed = true;

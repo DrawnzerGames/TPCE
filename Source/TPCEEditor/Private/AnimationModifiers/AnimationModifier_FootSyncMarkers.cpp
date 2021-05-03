@@ -12,7 +12,6 @@ FBoneModifier::FBoneModifier() :
 	BoneName(NAME_None),
 	Offset(0.0f)
 {
-
 }
 
 FBoneModifier::FBoneModifier(FName InBoneName):
@@ -29,7 +28,7 @@ FBoneModifier::FBoneModifier(FName InBoneName, float InOffset):
 
 UAnimationModifier_FootSyncMarkers::UAnimationModifier_FootSyncMarkers()
 {
-	PelvisBoneName = NAME_Root;
+	PelvisBoneName = NAME_Root_TPCE;
 	bAxisFromName = true;
 	MovementAxis = EAxisOption::Y;
 	bMarkFootPlantOnly = true;
@@ -38,7 +37,7 @@ UAnimationModifier_FootSyncMarkers::UAnimationModifier_FootSyncMarkers()
 	FootBones.Add(FBoneModifier(NAME_Foot_R));
 }
 
-bool UAnimationModifier_FootSyncMarkers::CanEditChange(const UProperty* InProperty) const
+bool UAnimationModifier_FootSyncMarkers::CanEditChange(const FProperty* InProperty) const
 {
 	bool bCanChange = Super::CanEditChange(InProperty);
 
@@ -65,7 +64,8 @@ void UAnimationModifier_FootSyncMarkers::RemoveSyncTrack(UAnimSequence* Animatio
 	}
 }
 
-FVector UAnimationModifier_FootSyncMarkers::GetRelativeBoneLocationAtTime(UAnimSequence* AnimationSequence, FName TargetBoneName, FName RelativeBoneName, float Time)
+FVector UAnimationModifier_FootSyncMarkers::GetRelativeBoneLocationAtTime(
+	UAnimSequence* AnimationSequence, FName TargetBoneName, FName RelativeBoneName, float Time)
 {
 	FTransform Transform;
 	TArray<FName> BonePath;
@@ -97,11 +97,11 @@ void UAnimationModifier_FootSyncMarkers::OnApply_Implementation(UAnimSequence* A
 		if (bAxisFromName)
 		{
 			static const FRegexPattern AxisPattern(
-				R"((Fwd)"				// Forward
-				R"(|Bwd)"				// Backward
-				R"(|[LR][A-Z\d][a-z])"	// Left/Right before another word (e.g A_RunLStart)
-				R"(|[LR]\d*$)"			// Left/Right at end of sentence (e.g A_RunL2)
-				R"(|\d{2,3}[LR]))"		// Angle and Left/Right (e.g A_Walk45R)
+				R"((Fwd)" // Forward
+				R"(|Bwd)" // Backward
+				R"(|[LR][A-Z\d][a-z])" // Left/Right before another word (e.g A_RunLStart)
+				R"(|[LR]\d*$)" // Left/Right at end of sentence (e.g A_RunL2)
+				R"(|\d{2,3}[LR]))" // Angle and Left/Right (e.g A_Walk45R)
 			);
 
 			FRegexMatcher AxisMatcher(AxisPattern, AnimationSequence->GetName());
@@ -151,11 +151,13 @@ void UAnimationModifier_FootSyncMarkers::OnApply_Implementation(UAnimSequence* A
 
 			if (bCreateCurve)
 			{
-				if (UAnimationBlueprintLibrary::DoesCurveExist(AnimationSequence, CurveName, ERawCurveTrackTypes::RCT_Float))
+				if (UAnimationBlueprintLibrary::DoesCurveExist(AnimationSequence, CurveName,
+				                                               ERawCurveTrackTypes::RCT_Float))
 				{
 					UAnimationBlueprintLibrary::RemoveCurve(AnimationSequence, CurveName);
 				}
-				UAnimationBlueprintLibrary::AddCurve(AnimationSequence, CurveName, ERawCurveTrackTypes::RCT_Float, false);
+				UAnimationBlueprintLibrary::AddCurve(AnimationSequence, CurveName, ERawCurveTrackTypes::RCT_Float,
+				                                     false);
 			}
 
 			float LastBoneDistance = 0.0f;
@@ -169,8 +171,10 @@ void UAnimationModifier_FootSyncMarkers::OnApply_Implementation(UAnimSequence* A
 				if (Frame == NumFrames)
 					Time -= 0.001f;
 
-				const FVector BoneRelativeLocation = GetRelativeBoneLocationAtTime(AnimationSequence, CurrentBoneName, PelvisBoneName, Time);
-				const float BoneDistance = (BoneRelativeLocation * Axis).Size() * FMath::Sign(BoneRelativeLocation | Axis) + CurrentBoneOffset;
+				const FVector BoneRelativeLocation = GetRelativeBoneLocationAtTime(
+					AnimationSequence, CurrentBoneName, PelvisBoneName, Time);
+				const float BoneDistance = (BoneRelativeLocation * Axis).Size() * FMath::Sign(
+					BoneRelativeLocation | Axis) + CurrentBoneOffset;
 
 				if (bCreateCurve)
 					UAnimationBlueprintLibrary::AddFloatCurveKey(AnimationSequence, CurveName, Time, BoneDistance);
@@ -179,9 +183,18 @@ void UAnimationModifier_FootSyncMarkers::OnApply_Implementation(UAnimSequence* A
 				{
 					if (!bMarkFootPlantOnly || BoneDistance < 0.0f)
 					{
-						const FName MarkerName = *(CurrentBoneName.ToString().Append((BoneDistance >= 0.0f ? TEXT("_step_fwd") : bMarkFootPlantOnly ? TEXT("_plant") : TEXT("_step_bwd"))));
-						const float MarkerTime = (BoneDistance == 0.0f) ? Time : (Time - (TimePerFrame * FMath::Abs(BoneDistance / (BoneDistance - LastBoneDistance))));
-						UAnimationBlueprintLibrary::AddAnimationSyncMarker(AnimationSequence, MarkerName, MarkerTime, NotifyTrackName);
+						const FName MarkerName = *(CurrentBoneName.ToString().Append(
+							(BoneDistance >= 0.0f
+								 ? TEXT("_step_fwd")
+								 : bMarkFootPlantOnly
+								 ? TEXT("_plant")
+								 : TEXT("_step_bwd"))));
+						const float MarkerTime = (BoneDistance == 0.0f)
+							                         ? Time
+							                         : (Time - (TimePerFrame * FMath::Abs(
+								                         BoneDistance / (BoneDistance - LastBoneDistance))));
+						UAnimationBlueprintLibrary::AddAnimationSyncMarker(
+							AnimationSequence, MarkerName, MarkerTime, NotifyTrackName);
 					}
 				}
 
@@ -191,7 +204,6 @@ void UAnimationModifier_FootSyncMarkers::OnApply_Implementation(UAnimSequence* A
 
 		UAnimationBlueprintLibrary::FinalizeBoneAnimation(AnimationSequence);
 	}
-
 }
 
 void UAnimationModifier_FootSyncMarkers::OnRevert_Implementation(UAnimSequence* AnimationSequence)
@@ -205,7 +217,8 @@ void UAnimationModifier_FootSyncMarkers::OnRevert_Implementation(UAnimSequence* 
 		for (auto& FootBone : FootBones)
 		{
 			const FName& CurveName = FootBone.BoneName;
-			if (UAnimationBlueprintLibrary::DoesCurveExist(AnimationSequence, CurveName, ERawCurveTrackTypes::RCT_Float))
+			if (UAnimationBlueprintLibrary::DoesCurveExist(AnimationSequence, CurveName, ERawCurveTrackTypes::RCT_Float)
+			)
 			{
 				UAnimationBlueprintLibrary::RemoveCurve(AnimationSequence, CurveName);
 			}
@@ -217,4 +230,3 @@ FName UAnimationModifier_FootSyncMarkers::GetSyncTrackName() const
 {
 	return NotifyTrackName;
 }
-

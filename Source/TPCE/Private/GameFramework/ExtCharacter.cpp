@@ -430,9 +430,14 @@ void AExtCharacter::PreReplication(IRepChangedPropertyTracker & ChangedPropertyT
 		if (GatherExtMovement())
 		{
 			DOREPLIFETIME_ACTIVE_OVERRIDE(AExtCharacter, ReplicatedExtMovement, IsReplicatingMovement());
-			PRAGMA_DISABLE_DEPRECATION_WARNINGS
-				DOREPLIFETIME_ACTIVE_OVERRIDE(AActor, ReplicatedMovement, false);
-			PRAGMA_ENABLE_DEPRECATION_WARNINGS
+			// Workaround: Disable replication of ReplicatedMovementMode since we have a custom movement mode replication that includes jump state info.
+			// Cannot use DOREPLIFETIME_ACTIVE_OVERRIDE(AActor, ReplicatedMovement, false) here because GET_MEMBER_NAME_CHECKED does not support
+			// protected/private members.
+			{
+				static const FName ReplicatedMovementPropertyName(TEXT("ReplicatedMovement"));
+				static FProperty* ReplicatedMovementProperty = GetReplicatedProperty(StaticClass(), AActor::StaticClass(), ReplicatedMovementPropertyName);
+				ChangedPropertyTracker.SetCustomIsActiveOverride(this, ReplicatedMovementProperty->RepIndex, false);
+			}
 		}
 		else
 		{
@@ -443,9 +448,14 @@ void AExtCharacter::PreReplication(IRepChangedPropertyTracker & ChangedPropertyT
 	else
 	{
 		DOREPLIFETIME_ACTIVE_OVERRIDE(AExtCharacter, ReplicatedExtMovement, false);
-		PRAGMA_DISABLE_DEPRECATION_WARNINGS
-			DOREPLIFETIME_ACTIVE_OVERRIDE(AActor, ReplicatedMovement, false);
-		PRAGMA_ENABLE_DEPRECATION_WARNINGS
+		// Workaround: Disable replication of ReplicatedMovementMode since we have a custom movement mode replication that includes jump state info.
+		// Cannot use DOREPLIFETIME_ACTIVE_OVERRIDE(AActor, ReplicatedMovement, false) here because GET_MEMBER_NAME_CHECKED does not support
+		// protected/private members.
+		{
+			static const FName ReplicatedMovementPropertyName(TEXT("ReplicatedMovement"));
+			static FProperty* ReplicatedMovementProperty = GetReplicatedProperty(StaticClass(), AActor::StaticClass(), ReplicatedMovementPropertyName);
+			ChangedPropertyTracker.SetCustomIsActiveOverride(this, ReplicatedMovementProperty->RepIndex, false);
+		}
 	}
 
 	// Workaround: Disable replication of ReplicatedMovementMode since we have a custom movement mode replication that includes jump state info.
@@ -453,8 +463,8 @@ void AExtCharacter::PreReplication(IRepChangedPropertyTracker & ChangedPropertyT
 	// protected/private members.
 	{
 		static const FName ReplicatedMovementModePropertyName(TEXT("ReplicatedMovementMode"));
-		static UProperty* ReplicatedMovementModeProperty = GetReplicatedProperty(StaticClass(), ACharacter::StaticClass(), ReplicatedMovementModePropertyName);
-		ChangedPropertyTracker.SetCustomIsActiveOverride(ReplicatedMovementModeProperty->RepIndex, false);
+		static FProperty* ReplicatedMovementModeProperty = GetReplicatedProperty(StaticClass(), ACharacter::StaticClass(), ReplicatedMovementModePropertyName);
+		ChangedPropertyTracker.SetCustomIsActiveOverride(this, ReplicatedMovementModeProperty->RepIndex, false);
 	}
 
 	// Workaround: RemoteViewPitch is taken from ReplicatedLook.Rotation.Pitch
@@ -670,7 +680,7 @@ void AExtCharacter::OnRep_IsPerformingGenericAction()
 
 #if WITH_EDITOR
 
-bool AExtCharacter::CanEditChange(const UProperty* InProperty) const
+bool AExtCharacter::CanEditChange(const FProperty* InProperty) const
 {
 	bool bCanChange = Super::CanEditChange(InProperty);
 
@@ -1845,7 +1855,7 @@ void AExtCharacter::OnEndRagdoll()
 #ifdef UE_BUILD_DEBUG
 		if (FBodyInstance* BodyInstance = MyMesh->GetBodyInstance(MyMesh->GetBoneName(0)))
 		{
-			TWeakObjectPtr<UBodySetup> BodySetup = BodyInstance->BodySetup;
+			const TWeakObjectPtr<UBodySetupCore> BodySetup = BodyInstance->BodySetup;
 			if (MyMesh->PhysicsTransformUpdateMode == EPhysicsTransformUpdateMode::SimulationUpatesComponentTransform && !(BodySetup.IsValid() && BodySetup->PhysicsType == EPhysicsType::PhysType_Kinematic))
 			{
 				UE_LOG(LogExtCharacter, Warning, TEXT("Use of a non-kinematic root bone may prevent the ragdoll from working properly. Either the mesh component Physics Transform Update Mode should be 'Component Transform Is Kinematic' or the root bone Physics Type should be Kinematic."));
@@ -1885,7 +1895,7 @@ void AExtCharacter::OnStartRagdoll()
 #ifdef UE_BUILD_DEBUG
 		if (FBodyInstance* BodyInstance = MyMesh->GetBodyInstance(MyMesh->GetBoneName(0)))
 		{
-			TWeakObjectPtr<UBodySetup> BodySetup = BodyInstance->BodySetup;
+			const TWeakObjectPtr<UBodySetupCore> BodySetup = BodyInstance->BodySetup;
 			if (MyMesh->PhysicsTransformUpdateMode == EPhysicsTransformUpdateMode::SimulationUpatesComponentTransform && !(BodySetup.IsValid() && BodySetup->PhysicsType == EPhysicsType::PhysType_Kinematic))
 			{
 				UE_LOG(LogExtCharacter, Warning, TEXT("Use of a non-kinematic root bone may prevent the ragdoll from working properly. Either the mesh component Physics Transform Update Mode should be 'Component Transform Is Kinematic' or the root bone Physics Type should be Kinematic."));

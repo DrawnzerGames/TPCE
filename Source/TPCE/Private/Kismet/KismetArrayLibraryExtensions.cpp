@@ -13,15 +13,16 @@ void UKismetArrayLibraryEx::Array_ShuffleWithStream(const TArray<int32>& TargetA
 	check(0);
 }
 
-void UKismetArrayLibraryEx::GenericArray_ShuffleWithStream(void* TargetArray, const UArrayProperty* ArrayProp, const FRandomStream& RandomStream)
+void UKismetArrayLibraryEx::GenericArray_ShuffleWithStream(void* TargetArray, const FArrayProperty* ArrayProp,
+                                                           const FRandomStream& RandomStream)
 {
 	if (TargetArray)
 	{
 		FScriptArrayHelper ArrayHelper(ArrayProp, TargetArray);
-		int32 LastIndex = ArrayHelper.Num() - 1;
+		const int32 LastIndex = ArrayHelper.Num() - 1;
 		for (int32 i = 0; i <= LastIndex; ++i)
 		{
-			int32 Index = RandomStream.RandRange(i, LastIndex);
+			const int32 Index = RandomStream.RandRange(i, LastIndex);
 			if (i != Index)
 			{
 				ArrayHelper.SwapValues(i, Index);
